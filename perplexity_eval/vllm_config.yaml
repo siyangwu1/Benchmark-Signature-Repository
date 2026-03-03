@@ -1,0 +1,9 @@
+# NOTE: This file is superseded by config/config.yaml (perplexity.vllm section).
+# wiki_eval.py now reads vLLM settings directly from the unified config.
+# This file is kept for reference only and is no longer loaded at runtime.
+
+enforce_eager: true
+trust_remote_code: false
+max_num_seqs: 512
+gpu_memory_utilization: 0.8
+dtype: "bfloat16"

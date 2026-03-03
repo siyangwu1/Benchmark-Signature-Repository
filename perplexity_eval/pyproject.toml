@@ -1,0 +1,28 @@
+[project]
+name = "perplex-eval"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "datasets>=3.6.0",
+    "requests>=2.32.4",
+    "vllm==0.9.0",
+]
+
+[tool.pyright]
+typeCheckingMode = "off"
+useLibraryCodeForTypes = false
+reportMissingImports = false
+reportMissingTypeStubs = false
+reportUnusedImport = false
+reportUnusedClass = false
+reportUnusedFunction = false
+reportUnusedVariable = false
+reportDuplicateImport = false
+reportOptionalSubscript = false
+reportOptionalMemberAccess = false
+reportOptionalCall = false
+reportOptionalIterable = false
+reportOptionalContextManager = false
+reportOptionalOperand = false

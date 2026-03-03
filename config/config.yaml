@@ -1,0 +1,121 @@
+# ============================================================
+# Unified Configuration — Benchmark Signature Repository
+#
+# Edit this file before running any step of the pipeline.
+# Relative paths are resolved from the repository root.
+# ============================================================
+
+
+# -----------------------------------------------------------
+# Paths
+# -----------------------------------------------------------
+paths:
+  # Step 1a — Downloaded RedPajama corpus shards
+  redpajama_download_dir: "data/raw"
+
+  # Step 1b — Pre-processed chunked dataset (Parquet with columns:
+  #   text_id, chunk_id, chunk_text) used by wiki_eval.py
+  chunked_dataset: "data/chunked_texts_df.parquet"
+
+  # Step 1 output — Per-model perplexity files (one Parquet per model)
+  perplexity_output_dir: "data/perplexity"
+
+  # Step 1→3 bridge — Feature matrix built from per-model perplexity Parquets
+  feature_matrix_dir: "data/feature_matrix"
+  filtered_parts_dir: "data/feature_matrix/parts_filtered"
+  chunkid2text: "data/feature_matrix/chunkid2text.parquet"
+
+  # Step 2 output — lm-evaluation-harness per-task result directories
+  benchmark_output_dir: "data/benchmark_eval"
+
+  # Step 2→3 bridge — Aggregated performance matrix CSV (rows=models, cols=benchmarks)
+  performance_matrix_dir: "data/benchmark_performance"
+
+  # Step 3 output — Signature CSVs and fitted Lasso models
+  signature_dir: "data/benchmark_signature"
+  model_dir: "data/benchmark_models"
+
+
+# -----------------------------------------------------------
+# Environment & Cache
+# Set HF_TOKEN via this file or the shell environment variable.
+# -----------------------------------------------------------
+environment:
+  hf_home: "/path/to/cache/hf_home"
+  hf_hub_cache: "/path/to/cache/hf_hub_cache"
+  hf_xet_cache: "/path/to/cache/hf_xet_cache"
+  vllm_cache_root: "/path/to/cache/vllm_cache"
+  uv_cache_dir: "/path/to/cache/uv_cache"
+  hf_token: ""          # leave empty to rely on the HF_TOKEN env var
+  hf_allow_code_eval: true
+
+
+# -----------------------------------------------------------
+# Step 1 — Perplexity Extraction  (perplexity_eval/)
+# -----------------------------------------------------------
+perplexity:
+  model: "Qwen/Qwen3-8B"
+  prompt_column: "chunk_text"
+  dp_size: 2        # data-parallel workers — one process per GPU
+  tp_size: 1        # tensor-parallel GPUs per worker (use >1 for large models)
+  debug_limit: 0    # 0 = full dataset; N > 0 = first N chunks only
+  verbose: false
+
+  # vLLM engine settings (passed directly to vllm.LLM)
+  vllm:
+    enforce_eager: true
+    trust_remote_code: false
+    max_num_seqs: 512
+    gpu_memory_utilization: 0.8
+    dtype: "bfloat16"
+
+
+# -----------------------------------------------------------
+# Step 2 — Benchmark Evaluation  (llm-eval/)
+# -----------------------------------------------------------
+benchmark:
+  model: "meta-llama/Llama-3.2-1B-Instruct"
+  tasks:
+    - "asdiv"
+    - "mmlu"
+    - "bbh"
+    - "mbpp"
+    - "ifeval"
+  tensor_parallel_size: 2
+  data_parallel_size: 1
+  gpu_memory_utilization: 0.7
+  tokenizer_mode: "auto"
+  batch_size: "auto"
+
+
+# -----------------------------------------------------------
+# Step 3 — Signature Extraction  (regression/)
+# -----------------------------------------------------------
+regression:
+  # Filename inside paths.performance_matrix_dir
+  performance_matrix_file: "performance_matrix.csv"
+
+  # Comma-separated benchmark column prefixes to select
+  task_prefixes: "mmlu_"
+
+  # Exact column names to force-include or exclude (comma-separated)
+  include: ""
+  exclude: ""
+
+  # Skip benchmarks that already have a signature CSV
+  only_remaining: false
+
+  # Thrush pre-filter: fraction of tokens taken from each tail
+  preselect_ratio: 0.000001
+
+  # Lasso regularisation strength (smaller → more tokens selected)
+  alpha: 0.01
+
+  lasso_max_iter: 10000
+  lasso_random_state: 42
+
+  # Sharding for parallel runs: set N > 1 and run with --part 0..N-1
+  n_shards: 1
+  shard_part: 0
+
+  verbose: false
